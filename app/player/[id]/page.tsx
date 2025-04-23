@@ -51,3 +51,4 @@ export default async function PlayerPage({ params }:{ params:{ id:string }}) {
     </main>
   );
 }
+// временное изменение для коммита
