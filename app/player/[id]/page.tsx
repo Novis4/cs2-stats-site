@@ -1,74 +1,51 @@
 'use client'
+import { prisma } from '@/lib/prisma';
+import { Avatar, Box, Divider, Grid, Paper, Typography } from '@mui/material';
 
-import { prisma } from '@/lib/prisma'
-import { Avatar, Box, Divider, Grid, Paper, Typography } from '@mui/material'
-import { notFound } from 'next/navigation'
+export default async function PlayerPage({ params }: { params: { id: string } }) {
+  const playerId = +params.id;
 
-export default async function PlayerProfile({ params }: { params: { id: string } }) {
-  const playerId = Number(params.id)
-  const player = await prisma.player.findUnique({
-    where: { id: playerId },
-    include: { stats: true },
-  })
-
-  if (!player) return notFound()
-
-  const all = await prisma.playerStats.groupBy({
-    by: ['playerId'],
+  const allStats = await prisma.playerStats.findMany({
     where: { playerId },
-    _sum: { kills: true, deaths: true, damage: true },
-    _count: { playerId: true },
-  })
+    include: { match: true }
+  });
 
-  const month = await prisma.playerStats.groupBy({
-    by: ['playerId'],
+  const monthStats = await prisma.playerStats.findMany({
     where: {
-  playerId,
-  match: {
-    is: {
-      date: {
-        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      playerId,
+      match: {
+        is: {
+          date: {
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+          }
+        }
       }
-    }
-  }
-}
-    _sum: { kills: true, deaths: true, damage: true },
-    _count: { playerId: true },
-  })
+    },
+    include: { match: true }
+  });
 
-  const sumAll = all[0]?._sum || {}
-  const countAll = all[0]?._count?.playerId || 0
-  const sumMonth = month[0]?._sum || {}
-  const countMonth = month[0]?._count?.playerId || 0
+  const totalKills = allStats.reduce((sum, s) => sum + s.kills, 0);
+  const totalDeaths = allStats.reduce((sum, s) => sum + s.deaths, 0);
+  const totalDamage = allStats.reduce((sum, s) => sum + s.damage, 0);
+  const kd = (totalKills / (totalDeaths || 1)).toFixed(2);
+  const adr = (totalDamage / (allStats.length || 1)).toFixed(0);
 
-  const totalKills = sumAll.kills ?? 0
-  const totalDeaths = sumAll.deaths ?? 0
-  const totalDamage = sumAll.damage ?? 0
-  const kd = totalDeaths ? (totalKills / totalDeaths).toFixed(2) : '∞'
-  const adr = countAll ? (totalDamage / countAll).toFixed(2) : '0.00'
-
-  const monthKills = sumMonth.kills ?? 0
-  const monthDeaths = sumMonth.deaths ?? 0
-  const monthDamage = sumMonth.damage ?? 0
-  const monthKd = monthDeaths ? (monthKills / monthDeaths).toFixed(2) : '∞'
-  const monthAdr = countMonth ? (monthDamage / countMonth).toFixed(2) : '0.00'
+  const monthKills = monthStats.reduce((sum, s) => sum + s.kills, 0);
+  const monthDeaths = monthStats.reduce((sum, s) => sum + s.deaths, 0);
+  const monthDamage = monthStats.reduce((sum, s) => sum + s.damage, 0);
+  const monthKd = (monthKills / (monthDeaths || 1)).toFixed(2);
+  const monthAdr = (monthDamage / (monthStats.length || 1)).toFixed(0);
+  const countMonth = monthStats.length;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={3} textAlign="center">
-            <Avatar
-              src={player.avatarUrl || undefined}
-              sx={{ width: 128, height: 128, margin: '0 auto', mb: 2 }}
-            />
-            <Typography variant="h6">{player.nickname}</Typography>
-            <Typography variant="body2">{player.realName}</Typography>
+    <Box p={2}>
+      <Paper sx={{ p: 2 }}>
+        <Grid container spacing={2}>
+          <Grid item>
+            <Avatar sx={{ width: 64, height: 64 }} />
+            <Typography variant="h6">Игрок #{playerId}</Typography>
           </Grid>
-          <Grid item xs={12} sm={9}>
-            <Typography variant="h6" gutterBottom>Общая статистика</Typography>
-            <Divider sx={{ mb: 1 }} />
-            <Typography>Матчей: {countAll}</Typography>
+          <Grid item xs>
             <Typography>Убийства: {totalKills}</Typography>
             <Typography>Смерти: {totalDeaths}</Typography>
             <Typography>Урон: {totalDamage}</Typography>
@@ -89,5 +66,5 @@ export default async function PlayerProfile({ params }: { params: { id: string }
         </Grid>
       </Paper>
     </Box>
-  )
+  );
 }
