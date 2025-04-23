@@ -15,8 +15,10 @@ export default async function PlayerPage({ params }: { params: { id: string } })
     where: {
       playerId,
       match: {
-        date: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        is: {
+          date: {
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          },
         },
       },
     },
