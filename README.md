@@ -28,3 +28,4 @@ Visit <http://localhost:3000>
 
 Build script already set, migrations run automatically.
 ```
+# cs2-stats-site
