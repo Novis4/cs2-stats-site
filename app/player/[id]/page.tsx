@@ -23,13 +23,15 @@ export default async function PlayerProfile({ params }: { params: { id: string }
   const month = await prisma.playerStats.groupBy({
     by: ['playerId'],
     where: {
-      playerId,
-      match: {
-        date: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-        },
-      },
-    },
+  playerId,
+  match: {
+    is: {
+      date: {
+        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      }
+    }
+  }
+}
     _sum: { kills: true, deaths: true, damage: true },
     _count: { playerId: true },
   })
