@@ -4,28 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",   // ← добавили prisma generate
     "start": "next start",
-    "prisma": "prisma"
+    "postinstall": "prisma generate"            // ← на всякий случай для локалки/Vercel
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^6.0.0",
-    "@mui/material": "^6.0.0",
-    "@mui/x-data-grid": "^8.0.0",
-    "@prisma/client": "^5.14.0",
-    "csv-parser": "^3.2.0",
-    "dayjs": "^1.11.13",
-    "next": "^14.1.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "swr": "^2.3.3"
+    ...
   },
   "devDependencies": {
-    "@types/node": "^22.14.1",
-    "prisma": "^5.14.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    ...
   }
 }
