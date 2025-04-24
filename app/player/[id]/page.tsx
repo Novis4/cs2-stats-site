@@ -1,50 +1,53 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import TeamCard from '@/components/TeamCard'; // Заменили Card на TeamCard
-import { Match, Player, PlayerStats } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
+import prisma from '@/lib/prisma';
+import TeamCard from '@/components/TeamCard';
 
-type PlayerProfile = Player & {
-  stats: (PlayerStats & { match: Match })[];
-};
+export default async function PlayerPage({ params }: { params: { id: string } }) {
+  const playerId = parseInt(params.id);
+  if (isNaN(playerId)) return notFound();
 
-export default function PlayerPage() {
-  const params = useParams();
-  const [player, setPlayer] = useState<PlayerProfile | null>(null);
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+  });
 
-  useEffect(() => {
-    const fetchPlayer = async () => {
-      const res = await fetch(`/api/player/${params.id}`);
-      if (!res.ok) return;
+  if (!player) return notFound();
 
-      const data = await res.json();
-      setPlayer(data);
-    };
-
-    fetchPlayer();
-  }, [params.id]);
-
-  if (!player) {
-    return <div>Загрузка...</div>;
-  }
+  const matches = await prisma.playerStats.findMany({
+    where: {
+      playerId,
+      match: {
+        is: {
+          date: {
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          },
+        },
+      },
+    },
+    include: {
+      match: true,
+    },
+    orderBy: {
+      match: {
+        date: 'desc',
+      },
+    },
+  });
 
   return (
     <div className="p-4 space-y-4">
-      <TeamCard>
-        <h1 className="text-xl font-bold">{player.name}</h1>
-        <p>ID: {player.id}</p>
-      </TeamCard>
-
-      <h2 className="text-lg font-semibold mt-4">Последние матчи:</h2>
-      <ul>
-        {player.stats.map(stat => (
-          <li key={stat.id}>
-            Матч #{stat.match.id} — Убийства: {stat.kills}, Смерти: {stat.deaths}
-          </li>
-        ))}
-      </ul>
+      <TeamCard
+        title={player.name}
+        players={matches.map((m) => ({
+          id: m.playerId,
+          name: player.name,
+          kills: m.kills,
+          deaths: m.deaths,
+          damage: m.damage,
+        }))}
+        maps={matches.length}
+      />
     </div>
   );
 }
