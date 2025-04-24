@@ -14,26 +14,21 @@ export default async function PlayerPage({ params }: { params: { id: string } })
 
   if (!player) return notFound();
 
-  const matches = await prisma.playerStats.findMany({
-    where: {
-      playerId,
-      match: {
-        is: {
-          date: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          },
+  const monthStats = await prisma.playerStats.findMany({
+  where: {
+    playerId,
+    match: {
+      is: {
+        date: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
       },
     },
-    include: {
-      match: true,
-    },
-    orderBy: {
-      match: {
-        date: 'desc',
-      },
-    },
-  });
+  },
+  include: {
+    match: true,
+  },
+});
 
   return (
     <div className="p-4 space-y-4">
