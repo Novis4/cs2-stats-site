@@ -1,7 +1,7 @@
 'use client';
 
 import { notFound } from 'next/navigation';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import TeamCard from '@/components/TeamCard';
 
 export default async function PlayerPage({ params }: { params: { id: string } }) {
