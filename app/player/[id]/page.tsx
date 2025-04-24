@@ -1,74 +1,78 @@
-'use client'
-import { prisma } from '@/lib/prisma';
-import { Avatar, Box, Divider, Grid, Paper, Typography } from '@mui/material';
+import { prisma } from '@/lib/prisma'
+import { notFound } from 'next/navigation'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import Image from 'next/image'
 
 export default async function PlayerPage({ params }: { params: { id: string } }) {
-  const playerId = +params.id;
+  const player = await prisma.player.findUnique({
+    where: { id: params.id },
+  })
 
-  const allStats = await prisma.playerStats.findMany({
-    where: { playerId },
-    include: { match: true }
-  });
+  if (!player) return notFound()
 
-  const monthStats = await prisma.playerStats.groupBy({
-    by: ['playerId'],
+  const totalStats = await prisma.playerStats.aggregate({
+    where: { playerId: player.id },
+    _sum: { kills: true, deaths: true, damage: true },
+    _count: { _all: true },
+  })
+
+  const monthStats = await prisma.playerStats.aggregate({
     where: {
-      playerId,
+      playerId: player.id,
       match: {
-        is: {
-          date: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          },
+        date: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
       },
     },
-    _sum: {
-      kills: true,
-      deaths: true,
-      damage: true
-    },
-    _count: {
-      playerId: true
-    }
-  });
+    _sum: { kills: true, deaths: true, damage: true },
+    _count: { _all: true },
+  })
 
-  const totalKills = allStats.reduce((sum, s) => sum + s.kills, 0);
-  const totalDeaths = allStats.reduce((sum, s) => sum + s.deaths, 0);
-  const totalDamage = allStats.reduce((sum, s) => sum + s.damage, 0);
-  const kd = (totalKills / (totalDeaths || 1)).toFixed(2);
-  const adr = (totalDamage / (allStats.length || 1)).toFixed(0);
+  const totalGames = totalStats._count._all ?? 0
+  const totalKills = totalStats._sum.kills ?? 0
+  const totalDeaths = totalStats._sum.deaths ?? 0
+  const totalDamage = totalStats._sum.damage ?? 0
 
-  const m = monthStats[0]?._sum || {};
-  const countMonth = monthStats[0]?._count?.playerId || 0;
+  const monthGames = monthStats._count._all ?? 0
+  const monthKills = monthStats._sum.kills ?? 0
+  const monthDeaths = monthStats._sum.deaths ?? 0
+  const monthDamage = monthStats._sum.damage ?? 0
 
   return (
-    <Box p={2}>
-      <Paper sx={{ p: 2 }}>
-        <Grid container spacing={2}>
-          <Grid item>
-            <Avatar sx={{ width: 64, height: 64 }} />
-            <Typography variant="h6">Игрок #{playerId}</Typography>
-          </Grid>
-          <Grid item xs>
-            <Typography>Убийства: {totalKills}</Typography>
-            <Typography>Смерти: {totalDeaths}</Typography>
-            <Typography>Урон: {totalDamage}</Typography>
-            <Typography>K/D: {kd}</Typography>
-            <Typography>ADR: {adr}</Typography>
+    <div className="p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-4">
+        <Image src={player.avatar} alt={player.name} width={120} height={120} className="rounded-xl" />
+        <div className="text-center sm:text-left mt-2 sm:mt-0">
+          <h1 className="text-2xl font-bold">{player.name}</h1>
+          <p className="text-gray-500">{player.nickname}</p>
+        </div>
+      </div>
 
-            <Box mt={3}>
-              <Typography variant="h6" gutterBottom>За месяц</Typography>
-              <Divider sx={{ mb: 1 }} />
-              <Typography>Матчей: {countMonth}</Typography>
-              <Typography>Убийства: {m.kills || 0}</Typography>
-              <Typography>Смерти: {m.deaths || 0}</Typography>
-              <Typography>Урон: {m.damage || 0}</Typography>
-              <Typography>K/D: {((m.kills || 0) / ((m.deaths || 1))).toFixed(2)}</Typography>
-              <Typography>ADR: {(m.damage ? (m.damage / countMonth).toFixed(0) : 0)}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Box>
-  );
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader title="Общая статистика" />
+          <CardContent className="space-y-1">
+            <p>Карты: {totalGames}</p>
+            <p>Убийства: {totalKills}</p>
+            <p>Смерти: {totalDeaths}</p>
+            <p>Урон: {totalDamage}</p>
+            <p>KD: {(totalKills / totalDeaths || 0).toFixed(2)}</p>
+            <p>ADR: {(totalDamage / totalGames || 0).toFixed(0)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader title="За месяц" />
+          <CardContent className="space-y-1">
+            <p>Карты: {monthGames}</p>
+            <p>Убийства: {monthKills}</p>
+            <p>Смерти: {monthDeaths}</p>
+            <p>Урон: {monthDamage}</p>
+            <p>KD: {(monthKills / monthDeaths || 0).toFixed(2)}</p>
+            <p>ADR: {(monthDamage / monthGames || 0).toFixed(0)}</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
